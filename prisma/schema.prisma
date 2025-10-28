@@ -1,0 +1,983 @@
+// Member X - Comprehensive Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// AUTHENTICATION & USERS
+// ============================================
+
+enum Role {
+  USER
+  PARTNER
+  CONTENT_EDITOR
+  SUPPORT
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  phone         String?
+  image         String?
+  password      String?
+  role          Role      @default(USER)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  accounts      Account[]
+  sessions      Session[]
+  orders        Order[]
+  bookings      Booking[]
+  reviews       Review[]
+  favorites     Favorite[]
+  
+  // Partner relations
+  managedVendors Vendor[]
+  redemptionAttempts RedemptionAttempt[]
+  
+  // CMS relations
+  createdPages       Page[]       @relation("PageCreator")
+  createdVersions    Version[]    @relation("VersionCreator")
+  auditLogs          AuditLog[]   @relation("AuditActor")
+  
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// MARKETPLACE CORE
+// ============================================
+
+model City {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  nameAr       String
+  nameEn       String
+  isActive     Boolean  @default(true)
+  order        Int      @default(0)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  listings     Listing[]
+  pages        Page[]
+  featureFlags FeatureFlag[]
+  
+  @@index([slug])
+  @@index([isActive])
+  @@map("cities")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  nameAr      String
+  nameEn      String
+  descAr      String?  @db.Text
+  descEn      String?  @db.Text
+  icon        String?
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  listings    Listing[]
+  pages       Page[]
+  
+  @@index([slug])
+  @@index([isActive])
+  @@map("categories")
+}
+
+model Vendor {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  nameAr        String
+  nameEn        String
+  descAr        String?  @db.Text
+  descEn        String?  @db.Text
+  logo          String?
+  coverImage    String?
+  phone         String?
+  email         String?
+  website       String?
+  isActive      Boolean  @default(true)
+  
+  latitude      Float?
+  longitude     Float?
+  addressAr     String?  @db.Text
+  addressEn     String?  @db.Text
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  managerId     String?
+  manager       User?    @relation(fields: [managerId], references: [id])
+  
+  listings      Listing[]
+  
+  @@index([slug])
+  @@index([isActive])
+  @@index([managerId])
+  @@map("vendors")
+}
+
+// ============================================
+// LISTINGS (DEALS)
+// ============================================
+
+enum ListingStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  LIVE
+  ENDED
+  ARCHIVED
+}
+
+enum BadgeType {
+  HOT
+  BEST_SELLER
+  FLASH
+  DISCOUNT
+  NEW
+}
+
+model Listing {
+  id               String         @id @default(cuid())
+  slug             String         @unique
+  
+  titleAr          String
+  titleEn          String
+  subtitleAr       String?
+  subtitleEn       String?
+  descAr           String?        @db.Text
+  descEn           String?        @db.Text
+  
+  cityId           String
+  city             City           @relation(fields: [cityId], references: [id])
+  
+  categoryId       String
+  category         Category       @relation(fields: [categoryId], references: [id])
+  
+  vendorId         String
+  vendor           Vendor         @relation(fields: [vendorId], references: [id])
+  
+  priceOriginal    Float
+  priceSale        Float
+  discountPct      Int?
+  
+  currency         String         @default("SAR")
+  
+  status           ListingStatus  @default(DRAFT)
+  badges           BadgeType[]
+  
+  startsAt         DateTime?
+  endsAt           DateTime?
+  
+  stock            Int?
+  maxPerUser       Int?
+  
+  highlightsAr     String[]
+  highlightsEn     String[]
+  
+  finePrivacy      String?        @db.Text
+  termsAr          String?        @db.Text
+  termsEn          String?        @db.Text
+  
+  bookingEnabled   Boolean        @default(true)
+  requiresSlot     Boolean        @default(false)
+  
+  latitude         Float?
+  longitude        Float?
+  
+  isActive         Boolean        @default(true)
+  isFeatured       Boolean        @default(false)
+  
+  viewCount        Int            @default(0)
+  orderCount       Int            @default(0)
+  
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  publishedAt      DateTime?
+  
+  variants         ListingVariant[]
+  assets           ListingAsset[]
+  terms            ListingTerm[]
+  faqs             ListingFaq[]
+  slotRules        SlotRule[]
+  orderItems       OrderItem[]
+  reviews          Review[]
+  favorites        Favorite[]
+  
+  @@index([slug])
+  @@index([cityId])
+  @@index([categoryId])
+  @@index([vendorId])
+  @@index([status])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@index([startsAt])
+  @@index([endsAt])
+  @@map("listings")
+}
+
+model ListingVariant {
+  id          String   @id @default(cuid())
+  listingId   String
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  
+  nameAr      String
+  nameEn      String
+  descAr      String?
+  descEn      String?
+  
+  priceAdjust Float    @default(0)
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  orderItems  OrderItem[]
+  
+  @@index([listingId])
+  @@map("listing_variants")
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+}
+
+model ListingAsset {
+  id          String    @id @default(cuid())
+  listingId   String
+  listing     Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  
+  type        AssetType @default(IMAGE)
+  url         String
+  altAr       String?
+  altEn       String?
+  order       Int       @default(0)
+  
+  createdAt   DateTime  @default(now())
+  
+  @@index([listingId])
+  @@map("listing_assets")
+}
+
+model ListingTerm {
+  id          String   @id @default(cuid())
+  listingId   String
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  
+  contentAr   String   @db.Text
+  contentEn   String   @db.Text
+  order       Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([listingId])
+  @@map("listing_terms")
+}
+
+model ListingFaq {
+  id          String   @id @default(cuid())
+  listingId   String
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  
+  questionAr  String
+  questionEn  String
+  answerAr    String   @db.Text
+  answerEn    String   @db.Text
+  order       Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([listingId])
+  @@map("listing_faqs")
+}
+
+// ============================================
+// BOOKING / INVENTORY
+// ============================================
+
+model SlotRule {
+  id              String   @id @default(cuid())
+  listingId       String
+  listing         Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  
+  nameAr          String
+  nameEn          String
+  
+  daysOfWeek      Int[]    // 0=Sunday, 6=Saturday
+  startTime       String   // HH:mm
+  endTime         String   // HH:mm
+  intervalMinutes Int
+  capacity        Int
+  
+  effectiveFrom   DateTime
+  effectiveUntil  DateTime?
+  
+  isActive        Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  timeSlots       TimeSlot[]
+  
+  @@index([listingId])
+  @@index([isActive])
+  @@map("slot_rules")
+}
+
+model TimeSlot {
+  id          String    @id @default(cuid())
+  ruleId      String
+  rule        SlotRule  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  
+  startsAt    DateTime
+  endsAt      DateTime
+  capacity    Int
+  booked      Int       @default(0)
+  blocked     Boolean   @default(false)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  holds       SlotHold[]
+  bookings    Booking[]
+  
+  @@unique([ruleId, startsAt])
+  @@index([ruleId])
+  @@index([startsAt])
+  @@index([blocked])
+  @@map("time_slots")
+}
+
+model SlotHold {
+  id          String    @id @default(cuid())
+  slotId      String
+  slot        TimeSlot  @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  
+  sessionId   String
+  quantity    Int       @default(1)
+  expiresAt   DateTime
+  
+  createdAt   DateTime  @default(now())
+  
+  @@index([slotId])
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@map("slot_holds")
+}
+
+// ============================================
+// ORDERS & PAYMENTS
+// ============================================
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  
+  status          OrderStatus @default(PENDING)
+  
+  subtotal        Float
+  discount        Float       @default(0)
+  tax             Float       @default(0)
+  total           Float
+  currency        String      @default("SAR")
+  
+  promoCode       String?
+  
+  customerName    String
+  customerEmail   String
+  customerPhone   String?
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  confirmedAt     DateTime?
+  
+  items           OrderItem[]
+  payments        Payment[]
+  bookings        Booking[]
+  vouchers        Voucher[]
+  
+  @@index([userId])
+  @@index([status])
+  @@index([orderNumber])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String          @id @default(cuid())
+  orderId     String
+  order       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  listingId   String
+  listing     Listing         @relation(fields: [listingId], references: [id])
+  
+  variantId   String?
+  variant     ListingVariant? @relation(fields: [variantId], references: [id])
+  
+  quantity    Int
+  priceUnit   Float
+  priceTotal  Float
+  
+  createdAt   DateTime        @default(now())
+  
+  @@index([orderId])
+  @@index([listingId])
+  @@map("order_items")
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  TAP
+  HYPERPAY
+  PAYTABS
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  provider        PaymentMethod
+  transactionId   String?       @unique
+  status          PaymentStatus @default(PENDING)
+  
+  amount          Float
+  currency        String        @default("SAR")
+  
+  metadata        Json?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  completedAt     DateTime?
+  
+  @@index([orderId])
+  @@index([transactionId])
+  @@index([status])
+  @@map("payments")
+}
+
+// ============================================
+// BOOKINGS & VOUCHERS
+// ============================================
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  bookingRef  String        @unique
+  
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  
+  orderId     String
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  slotId      String?
+  slot        TimeSlot?     @relation(fields: [slotId], references: [id])
+  
+  status      BookingStatus @default(PENDING)
+  quantity    Int           @default(1)
+  
+  customerName  String
+  customerEmail String
+  customerPhone String?
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  confirmedAt DateTime?
+  
+  @@index([userId])
+  @@index([orderId])
+  @@index([slotId])
+  @@index([status])
+  @@index([bookingRef])
+  @@map("bookings")
+}
+
+enum VoucherStatus {
+  ACTIVE
+  REDEEMED
+  EXPIRED
+  CANCELLED
+}
+
+model Voucher {
+  id          String        @id @default(cuid())
+  code        String        @unique
+  
+  orderId     String
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  status      VoucherStatus @default(ACTIVE)
+  
+  validFrom   DateTime
+  validUntil  DateTime
+  
+  redemptions RedemptionAttempt[]
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  redeemedAt  DateTime?
+  
+  @@index([code])
+  @@index([orderId])
+  @@index([status])
+  @@map("vouchers")
+}
+
+model RedemptionAttempt {
+  id          String   @id @default(cuid())
+  voucherId   String
+  voucher     Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  
+  staffId     String?
+  staff       User?    @relation(fields: [staffId], references: [id])
+  
+  success     Boolean
+  reason      String?
+  ipAddress   String?
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([voucherId])
+  @@index([staffId])
+  @@index([createdAt])
+  @@map("redemption_attempts")
+}
+
+// ============================================
+// REVIEWS & FAVORITES
+// ============================================
+
+model Review {
+  id          String   @id @default(cuid())
+  listingId   String
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  rating      Int
+  comment     String?  @db.Text
+  
+  isApproved  Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([listingId])
+  @@index([userId])
+  @@index([isApproved])
+  @@map("reviews")
+}
+
+model Favorite {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  listingId   String
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([userId, listingId])
+  @@index([userId])
+  @@index([listingId])
+  @@map("favorites")
+}
+
+// ============================================
+// CMS MODELS
+// ============================================
+
+enum PageType {
+  HOME
+  CATEGORY
+  STATIC
+  CUSTOM
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+model Page {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  type          PageType
+  
+  titleAr       String
+  titleEn       String
+  
+  cityId        String?
+  city          City?         @relation(fields: [cityId], references: [id])
+  
+  categoryId    String?
+  category      Category?     @relation(fields: [categoryId], references: [id])
+  
+  status        PublishStatus @default(DRAFT)
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  
+  jsonBlocks    Json?         // Flexible JSON content blocks
+  
+  createdById   String
+  createdBy     User          @relation("PageCreator", fields: [createdById], references: [id])
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  sections      PageSection[]
+  
+  @@index([slug])
+  @@index([type])
+  @@index([status])
+  @@index([cityId])
+  @@index([categoryId])
+  @@map("pages")
+}
+
+enum SectionType {
+  HERO
+  HOT_NOW
+  ALL_OFFERS
+  CATEGORY_TILES
+  BANNERS
+  CUSTOM
+}
+
+model PageSection {
+  id          String      @id @default(cuid())
+  pageId      String
+  page        Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  
+  type        SectionType
+  order       Int         @default(0)
+  isVisible   Boolean     @default(true)
+  
+  titleAr     String?
+  titleEn     String?
+  subtitleAr  String?
+  subtitleEn  String?
+  
+  maxItems    Int?
+  config      Json?       // Data source rules, styling, etc.
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  @@index([pageId])
+  @@index([order])
+  @@map("page_sections")
+}
+
+enum NavLocation {
+  HEADER
+  FOOTER
+}
+
+model NavigationItem {
+  id          String      @id @default(cuid())
+  location    NavLocation
+  
+  labelAr     String
+  labelEn     String
+  href        String
+  
+  parentId    String?
+  parent      NavigationItem?  @relation("NavChildren", fields: [parentId], references: [id])
+  children    NavigationItem[] @relation("NavChildren")
+  
+  order       Int         @default(0)
+  isVisible   Boolean     @default(true)
+  
+  targetRules Json?       // City/role/date targeting
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  @@index([location])
+  @@index([order])
+  @@index([parentId])
+  @@map("navigation_items")
+}
+
+model Banner {
+  id            String        @id @default(cuid())
+  
+  titleAr       String
+  titleEn       String
+  subtitleAr    String?
+  subtitleEn    String?
+  
+  imageUrl      String
+  videoUrl      String?
+  
+  ctaTextAr     String?
+  ctaTextEn     String?
+  ctaLink       String?
+  
+  cityTargets   String[]      // Empty = all cities
+  placement     String        @default("hero") // hero, mid-page, etc.
+  
+  status        PublishStatus @default(DRAFT)
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  
+  priority      Int           @default(0)
+  abLabel       String?       // For A/B testing
+  
+  impressions   Int           @default(0)
+  clicks        Int           @default(0)
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  @@index([status])
+  @@index([placement])
+  @@index([priority])
+  @@map("banners")
+}
+
+model MediaAsset {
+  id            String   @id @default(cuid())
+  
+  cloudinaryId  String   @unique
+  url           String
+  format        String?
+  width         Int?
+  height        Int?
+  size          Int?
+  
+  altAr         String?
+  altEn         String?
+  tags          String[]
+  
+  usageRefs     Json?    // Track where used
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([cloudinaryId])
+  @@index([tags])
+  @@map("media_assets")
+}
+
+model SeoMeta {
+  id            String   @id @default(cuid())
+  
+  entityType    String   // Page, Listing, Category, etc.
+  entityId      String
+  
+  titleAr       String?
+  titleEn       String?
+  descriptionAr String?  @db.Text
+  descriptionEn String?  @db.Text
+  
+  canonical     String?
+  ogImageUrl    String?
+  
+  keywords      String[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Note: Polymorphic relations - entityId references either Page.id or Listing.id based on entityType
+  // Direct Prisma relations removed as they don't support polymorphic associations
+  
+  @@unique([entityType, entityId])
+  @@index([entityType])
+  @@map("seo_meta")
+}
+
+model Translation {
+  id          String   @id @default(cuid())
+  key         String
+  namespace   String   @default("common")
+  
+  ar          String   @db.Text
+  en          String   @db.Text
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([key, namespace])
+  @@index([namespace])
+  @@map("translations")
+}
+
+model ThemeSetting {
+  id            String   @id @default(cuid())
+  
+  primaryColor  String   @default("#0066FF")
+  accentColor   String   @default("#FF6B00")
+  
+  fontFamily    String   @default("Cairo")
+  
+  logoLightUrl  String?
+  logoDarkUrl   String?
+  faviconUrl    String?
+  
+  borderRadius  Int      @default(12)
+  shadowEnabled Boolean  @default(true)
+  
+  customCss     String?  @db.Text
+  
+  updatedAt     DateTime @updatedAt
+  
+  @@map("theme_settings")
+}
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String
+  
+  enabled     Boolean  @default(false)
+  
+  cityId      String?
+  city        City?    @relation(fields: [cityId], references: [id])
+  
+  description String?
+  config      Json?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([key, cityId])
+  @@index([key])
+  @@index([enabled])
+  @@map("feature_flags")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  
+  actorId     String
+  actor       User     @relation("AuditActor", fields: [actorId], references: [id])
+  
+  entityType  String
+  entityId    String
+  action      String   // CREATE, UPDATE, DELETE, PUBLISH, etc.
+  
+  diff        Json?    // Before/after changes
+  
+  ipAddress   String?
+  userAgent   String?
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Version {
+  id          String   @id @default(cuid())
+  
+  entityType  String
+  entityId    String
+  
+  snapshot    Json     // Full entity snapshot
+  note        String?
+  
+  createdById String
+  createdBy   User     @relation("VersionCreator", fields: [createdById], references: [id])
+  
+  createdAt   DateTime @default(now())
+  
+  // Note: Polymorphic relations - entityId references Page.id, Listing.id, etc. based on entityType
+  // Direct Prisma relations removed as they don't support polymorphic associations
+  
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("versions")
+}
+
