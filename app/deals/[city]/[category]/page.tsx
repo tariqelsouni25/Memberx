@@ -1,8 +1,8 @@
 import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { Metadata } from 'next';
-import { Header } from '@/components/header';
-import { Footer } from '@/components/footer';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { DealGrid, DealGridSkeleton } from '@/components/deal-grid';
 import { KPIChips } from '@/components/category/kpi-chips';
