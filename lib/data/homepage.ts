@@ -182,14 +182,24 @@ export async function getHomepageData(params: HomepageParams): Promise<HomepageD
 
 // Get all active cities for city switcher
 export async function getActiveCities() {
-  return db.city.findMany({
-    where: { isActive: true },
-    orderBy: { order: 'asc' },
-    select: {
-      slug: true,
-      nameAr: true,
-      nameEn: true,
-    },
-  });
+  try {
+    return await db.city.findMany({
+      where: { isActive: true },
+      orderBy: { order: 'asc' },
+      select: {
+        slug: true,
+        nameAr: true,
+        nameEn: true,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching active cities:', error);
+    // Return default cities if database fails
+    return [
+      { slug: 'riyadh', nameAr: 'الرياض', nameEn: 'Riyadh' },
+      { slug: 'jeddah', nameAr: 'جدة', nameEn: 'Jeddah' },
+      { slug: 'dammam', nameAr: 'الدمام', nameEn: 'Dammam' },
+    ];
+  }
 }
 

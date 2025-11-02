@@ -73,16 +73,49 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const isAr = lang === 'ar';
 
   // Get homepage data
-  const data = await getHomepageData({
-    city,
-    lang,
-    page,
-    perPage: 24,
-    sort,
-  });
+  let data;
+  try {
+    data = await getHomepageData({
+      city,
+      lang,
+      page,
+      perPage: 24,
+      sort,
+    });
+  } catch (error) {
+    console.error('Error loading homepage:', error);
+    data = null;
+  }
 
+  // If no data (database error or no city), show empty state
   if (!data) {
-    redirect('/deals/riyadh');
+    // Get cities for switcher with error handling
+    const cities = await getActiveCities();
+    
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header locale={lang} city={city} />
+        <main className="flex-1 container mx-auto px-4 py-12">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">
+              {isAr ? 'مرحبًا بك في Member X' : 'Welcome to Member X'}
+            </h1>
+            <p className="text-muted-foreground mb-8">
+              {isAr 
+                ? 'يبدو أن قاعدة البيانات غير متصلة. يرجى التحقق من إعدادات قاعدة البيانات.'
+                : 'It looks like the database is not connected. Please check your database settings.'}
+            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                {isAr ? 'أو تصفح الفئات:' : 'Or browse categories:'}
+              </p>
+              <CategoryTiles city={city} locale={lang} />
+            </div>
+          </div>
+        </main>
+        <Footer locale={lang} />
+      </div>
+    );
   }
 
   // Get cities for switcher
