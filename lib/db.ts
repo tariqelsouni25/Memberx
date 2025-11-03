@@ -10,7 +10,7 @@ export const db = globalForPrisma.prisma || new PrismaClient({
     },
   },
   // Optimize for serverless/edge environments
-  // @ts-ignore
+  // @ts-expect-error - Internal Prisma option for serverless optimization
   __internal: {
     engine: {
       connectionTimeout: 30000, // 30 seconds

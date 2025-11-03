@@ -129,7 +129,7 @@ export async function getCategoryPageData(
     // Time window / Date range
     if (params.timeWindow || params.dateFrom || params.dateTo) {
       const now = new Date();
-      let startDate = params.dateFrom ? new Date(params.dateFrom) : now;
+      const startDate = params.dateFrom ? new Date(params.dateFrom) : now;
       let endDate: Date | undefined;
 
       if (params.timeWindow === 'today') {
