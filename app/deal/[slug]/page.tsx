@@ -18,15 +18,27 @@ interface DealDetailPageProps {
 }
 
 export async function generateStaticParams() {
-  const listings = await db.listing.findMany({
-    where: { status: 'LIVE', isActive: true },
-    select: { slug: true },
-    take: 100,
-  });
+  // Skip static generation during build if database is not available
+  // Pages will be generated dynamically at runtime instead
+  if (!db) {
+    console.warn('Database not available during build. Skipping static params generation.');
+    return [];
+  }
 
-  return listings.map((listing) => ({
-    slug: listing.slug,
-  }));
+  try {
+    const listings = await db.listing.findMany({
+      where: { status: 'LIVE', isActive: true },
+      select: { slug: true },
+      take: 100,
+    });
+
+    return listings.map((listing) => ({
+      slug: listing.slug,
+    }));
+  } catch (error) {
+    console.warn('Failed to fetch listings for static params:', error);
+    return [];
+  }
 }
 
 async function getDealData(slug: string) {
