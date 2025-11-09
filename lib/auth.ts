@@ -5,7 +5,7 @@ import { db } from './db';
 import { compare } from 'bcryptjs';
 
 export const authConfig: NextAuthConfig = {
-  adapter: PrismaAdapter(db),
+  adapter: PrismaAdapter(db) as any,
   session: {
     strategy: 'jwt',
   },
@@ -59,7 +59,7 @@ export const authConfig: NextAuthConfig = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.role = token.role as string;
+        session.user.role = token.role as any;
         session.user.id = token.id as string;
       }
       return session;

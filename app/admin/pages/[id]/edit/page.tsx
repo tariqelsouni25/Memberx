@@ -11,15 +11,17 @@ import { adminGuard } from '@/lib/admin/guards';
 import { Permission } from '@/lib/admin/permissions';
 
 interface EditPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function EditPagePage({ params }: EditPageProps) {
   await adminGuard([Permission.PAGES_EDIT]);
 
+  const { id } = await params;
+
   // Mock page data - replace with actual database query
   const page = {
-    id: params.id,
+    id,
     slug: 'home',
     titleAr: 'الصفحة الرئيسية',
     titleEn: 'Homepage',

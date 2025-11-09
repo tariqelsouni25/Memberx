@@ -5,12 +5,12 @@ import { Permission } from '@/lib/admin/permissions';
 // GET /api/admin/pages/[id] - Get single page
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
 
-    const { id } = params;
+    const { id } = await params;
 
     // Mock data - replace with actual database query
     const page = {
@@ -52,12 +52,12 @@ export async function GET(
 // PUT /api/admin/pages/[id] - Update page
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { titleAr, titleEn, slug, type, descriptionAr, descriptionEn, metaTitleAr, metaTitleEn, metaDescriptionAr, metaDescriptionEn, keywords, isPublished, showInMenu, allowComments } = body;
 
@@ -110,12 +110,12 @@ export async function PUT(
 // DELETE /api/admin/pages/[id] - Delete page
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
 
-    const { id } = params;
+    const { id } = await params;
 
     // Mock page deletion - replace with actual database operation
     // Check if page has sections first
