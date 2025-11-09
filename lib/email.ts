@@ -1,6 +1,15 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend conditionally - handle missing API key during build
+function createResendClient() {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not found. Email functionality will be disabled.');
+    return null;
+  }
+  return new Resend(process.env.RESEND_API_KEY);
+}
+
+const resend = createResendClient();
 
 interface SendEmailOptions {
   to: string;
@@ -10,6 +19,12 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, html, from }: SendEmailOptions) {
+  // Guard against missing Resend client
+  if (!resend) {
+    console.error('Email service not initialized. Check RESEND_API_KEY environment variable.');
+    throw new Error('Email service not available');
+  }
+
   try {
     const { data, error } = await resend.emails.send({
       from: from || 'Member X <noreply@memberx.com>',

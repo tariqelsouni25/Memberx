@@ -7,7 +7,8 @@
   "build": {
     "env": {
       "SKIP_ENV_VALIDATION": "true",
-      "DATABASE_URL": "postgresql://placeholder:placeholder@placeholder:5432/placeholder?schema=public"
+      "DATABASE_URL": "postgresql://placeholder:placeholder@placeholder:5432/placeholder?schema=public",
+      "RESEND_API_KEY": "re_placeholder_key_for_build"
     }
   }
 }
