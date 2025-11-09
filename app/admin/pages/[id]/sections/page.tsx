@@ -19,7 +19,7 @@ import { adminGuard } from '@/lib/admin/guards';
 import { Permission } from '@/lib/admin/permissions';
 
 interface PageSectionsProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // Mock sections data
@@ -84,15 +84,17 @@ const mockSections = [
 export default async function PageSectionsPage({ params }: PageSectionsProps) {
   await adminGuard([Permission.PAGES_EDIT]);
 
+  const { id } = await params;
+
   // Mock page data
   const page = {
-    id: params.id,
+    id,
     titleAr: 'الصفحة الرئيسية',
     titleEn: 'Homepage',
     slug: 'home'
   };
 
-  const sections = mockSections.filter(section => section.pageId === params.id);
+  const sections = mockSections.filter(section => section.pageId === id);
 
   return (
     <div className="min-h-screen bg-slate-50">

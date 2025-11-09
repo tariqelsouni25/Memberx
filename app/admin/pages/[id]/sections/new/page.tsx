@@ -11,15 +11,17 @@ import { adminGuard } from '@/lib/admin/guards';
 import { Permission } from '@/lib/admin/permissions';
 
 interface NewSectionProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function NewSectionPage({ params }: NewSectionProps) {
   await adminGuard([Permission.PAGES_EDIT]);
 
+  const { id } = await params;
+
   // Mock page data
   const page = {
-    id: params.id,
+    id,
     titleAr: 'الصفحة الرئيسية',
     titleEn: 'Homepage',
     slug: 'home'
