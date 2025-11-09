@@ -2,21 +2,22 @@ import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-export const db = globalForPrisma.prisma || new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
-  // Optimize for serverless/edge environments
-  // @ts-expect-error - Internal Prisma option for serverless optimization
-  __internal: {
-    engine: {
-      connectionTimeout: 30000, // 30 seconds
-    },
-  },
-});
+// Create Prisma client with build-time safety
+function createPrismaClient() {
+  // During build time, DATABASE_URL might not be set
+  // Return a mock client that will work for type checking
+  if (!process.env.DATABASE_URL) {
+    console.warn('DATABASE_URL not found. Creating placeholder Prisma client for build.');
+    // Return a basic PrismaClient without datasource config for build time
+    return new PrismaClient();
+  }
+
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  });
+}
+
+export const db = globalForPrisma.prisma ?? createPrismaClient();
 
 // Graceful shutdown
 if (process.env.NODE_ENV !== 'production') {
