@@ -7,17 +7,16 @@ import { redirect } from 'next/navigation';
 import { Role } from '@prisma/client';
 import { canAccessAdmin, hasPermission, Permission } from './permissions';
 
-// Mock auth function for now (replace with actual auth when available)
+// Import auth from NextAuth
 async function auth() {
-  // Return mock session for development
-  return {
-    user: {
-      id: '1',
-      email: 'admin@demo.local',
-      name: 'Admin User',
-      role: 'ADMIN' as Role
-    }
-  };
+  try {
+    const { auth: getAuth } = await import('@/auth.config');
+    const session = await getAuth();
+    return session;
+  } catch (error) {
+    console.error('Auth error:', error);
+    return null;
+  }
 }
 
 /**
