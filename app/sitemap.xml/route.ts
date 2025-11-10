@@ -1,16 +1,31 @@
 import { db } from '@/lib/db';
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://memberx.com';
 
-  const [cities, categories, listings] = await Promise.all([
-    db.city.findMany({ where: { isActive: true } }),
-    db.category.findMany({ where: { isActive: true } }),
-    db.listing.findMany({
-      where: { isActive: true, status: 'LIVE' },
-      select: { slug: true, updatedAt: true },
-    }),
-  ]);
+  // Handle missing database during build - return minimal sitemap
+  let cities: any[] = [];
+  let categories: any[] = [];
+  let listings: any[] = [];
+
+  if (db) {
+    try {
+      [cities, categories, listings] = await Promise.all([
+        db.city.findMany({ where: { isActive: true } }),
+        db.category.findMany({ where: { isActive: true } }),
+        db.listing.findMany({
+          where: { isActive: true, status: 'LIVE' },
+          select: { slug: true, updatedAt: true },
+        }),
+      ]);
+    } catch (error) {
+      console.warn('Failed to fetch data for sitemap. Returning static pages only:', error);
+      // Continue with empty arrays
+    }
+  }
 
   const staticPages = [
     { url: '/', changefreq: 'daily', priority: 1.0 },

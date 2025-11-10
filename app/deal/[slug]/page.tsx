@@ -17,6 +17,9 @@ interface DealDetailPageProps {
   searchParams: Promise<{ lang?: string }>;
 }
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export async function generateStaticParams() {
   // Skip static generation during build if database is not available
   // Pages will be generated dynamically at runtime instead
